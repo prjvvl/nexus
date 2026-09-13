@@ -1,0 +1,10 @@
+services:
+  web:
+    image: nginx:alpine
+    container_name: nexus-demo
+    # No restart policy here on purpose: recovery is Nexus's job for this demo,
+    # so the reconciler's own restart-with-backoff is what brings it back.
+    ports:
+      - "8091:80"
+    volumes:
+      - ./html:/usr/share/nginx/html:ro

@@ -1,0 +1,10 @@
+manifest.yaml
+state.db
+ui/node_modules/
+ui/dist/
+ui/*.tsbuildinfo
+venv/
+__pycache__/
+*.pyc
+examples/demo-job/output.log
+server.log

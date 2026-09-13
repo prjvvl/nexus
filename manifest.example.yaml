@@ -1,0 +1,36 @@
+# Copy this to manifest.yaml and edit for this machine.
+# manifest.yaml is per-machine config, not part of the Nexus codebase.
+#
+# The entries below are a real, working demo (examples/demo-app,
+# examples/demo-job) - safe to leave in to verify a fresh install actually
+# works end to end before wiring in real services.
+
+services:
+  # Full example: auto-restart on crash, plus a log viewer.
+  # status_script/logs_script are both optional - only add them if you want
+  # that service monitored. Without status_script, Nexus just trusts whatever
+  # you told it last (no auto-restart).
+  - name: nexus-demo
+    script: scripts/defaults/run-compose.sh
+    stop_script: scripts/defaults/stop-compose.sh
+    status_script: scripts/defaults/status-compose.sh
+    logs_script: scripts/defaults/logs-compose.sh
+    args: ["examples/demo-app"]
+    desired_state: stopped
+    max_restarts: 5
+    restart_base_delay: 10
+    restart_max_delay: 300
+    restart_reset_after: 600
+
+  # Minimal example: just start/stop, no monitoring. Nexus won't verify
+  # it's alive or auto-restart it if it crashes.
+  - name: example-minimal-service
+    script: scripts/defaults/run-compose.sh
+    stop_script: scripts/defaults/stop-compose.sh
+    args: ["/path/to/app/with/docker-compose.yml"]
+    desired_state: stopped
+
+jobs:
+  - name: nexus-demo-job
+    script: examples/demo-job/run.sh
+    schedule: "*/2 * * * *"

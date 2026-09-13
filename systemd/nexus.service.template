@@ -1,0 +1,15 @@
+[Unit]
+Description=Nexus service orchestrator
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=__NEXUS_USER__
+WorkingDirectory=__NEXUS_INSTALL_DIR__
+ExecStart=__NEXUS_INSTALL_DIR__/venv/bin/python __NEXUS_INSTALL_DIR__/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
