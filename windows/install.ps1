@@ -1,9 +1,17 @@
 # Bootstraps Nexus on Windows: gets the code into a canonical install dir
 # (mirroring install.sh's git-clone/pull/copy, not just operating wherever
 # you happen to run this from), creates the venv, installs deps, builds the
-# UI, seeds manifest.yaml, and registers a scheduled task ("Nexus") that
-# starts it at logon and keeps it running (run-nexus.ps1 restart-loops it,
-# mirroring systemd's Restart=always on Linux). Safe to re-run.
+# UI, seeds manifest.yaml, and drops a shortcut into the Startup folder so
+# run-nexus.ps1 (which restart-loops it, mirroring systemd's
+# Restart=always) launches at logon - then starts it immediately too.
+#
+# Deliberately not a scheduled task: Register-ScheduledTask with an AtLogOn
+# trigger needs a privilege (SeCreateGlobalPrivilege) that Windows only
+# grants to admin accounts, even for a task that just runs as yourself -
+# confirmed failing with "Access is denied" on a standard (non-admin)
+# account, in both an elevated-nothing terminal and here. The Startup
+# folder needs no special privilege at all; it's how most consumer apps
+# launch at login without asking for admin. Safe to re-run.
 #
 # Usage - either clone it yourself first:
 #   git clone https://github.com/prjvvl/nexus.git
@@ -108,27 +116,36 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
     Write-Warning "npm not found on PATH - skipping UI build. Install Node.js (https://nodejs.org/) and re-run to get the dashboard."
 }
 
-Write-Host "==> Registering scheduled task 'Nexus' (starts at logon, restarts on exit)"
-$Action = New-ScheduledTaskAction -Execute "powershell.exe" `
-    -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$RepoDir\windows\run-nexus.ps1`""
-$Trigger = New-ScheduledTaskTrigger -AtLogOn
-$Settings = New-ScheduledTaskSettingsSet `
-    -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-    -ExecutionTimeLimit ([TimeSpan]::Zero)
-$Principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+$RunNexusArgs = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$RepoDir\windows\run-nexus.ps1`""
 
 # Stop any already-running instance (from a previous install) before
-# swapping the task definition - otherwise the old process keeps running
-# and Start-ScheduledTask below launches a second one fighting it for
-# port 8787, unlike Linux's `systemctl restart` / macOS's bootout+bootstrap.
-Stop-ScheduledTask -TaskName "Nexus" -ErrorAction SilentlyContinue
-Unregister-ScheduledTask -TaskName "Nexus" -Confirm:$false -ErrorAction SilentlyContinue
-Register-ScheduledTask -TaskName "Nexus" -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal | Out-Null
+# starting a new one - otherwise the old process keeps running and the
+# Start-Process below launches a second one fighting it for port 8787,
+# unlike Linux's `systemctl restart` / macOS's bootout+bootstrap. The
+# wrapper (run-nexus.ps1's restart loop) is matched by command line since
+# there's no task/service object to query; killing it first, before its
+# python child, stops it from just relaunching that child a moment later.
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -like "*run-nexus.ps1*" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Get-Process python -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -eq (Join-Path $RepoDir "venv\Scripts\python.exe") } |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+
+Write-Host "==> Adding a Startup shortcut (starts at logon, restarts on exit)"
+$StartupDir = [Environment]::GetFolderPath("Startup")
+$ShortcutPath = Join-Path $StartupDir "Nexus.lnk"
+$WScriptShell = New-Object -ComObject WScript.Shell
+$Shortcut = $WScriptShell.CreateShortcut($ShortcutPath)
+$Shortcut.TargetPath = (Get-Command powershell.exe).Source
+$Shortcut.Arguments = $RunNexusArgs
+$Shortcut.WorkingDirectory = $RepoDir
+$Shortcut.Save()
 
 Write-Host "==> Starting Nexus now"
-Start-ScheduledTask -TaskName "Nexus"
+Start-Process -FilePath "powershell.exe" -ArgumentList $RunNexusArgs -WorkingDirectory $RepoDir
 
 Write-Host "==> Done. Dashboard should be at http://localhost:8787 shortly."
 Write-Host "    Logs: $RepoDir\nexus.out.log / nexus.err.log"
-Write-Host "    Manage the task: Get-ScheduledTask -TaskName Nexus, or via the Task Scheduler GUI."
-Write-Host "    Uninstall: Unregister-ScheduledTask -TaskName Nexus -Confirm:`$false"
+Write-Host "    Manage: look for 'Nexus' among the running powershell.exe/python.exe processes."
+Write-Host "    Uninstall: delete `"$ShortcutPath`" and stop the running processes."

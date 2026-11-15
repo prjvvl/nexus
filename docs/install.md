@@ -42,8 +42,9 @@ launchd agent on macOS, or a restart-on-exit scheduled task on Windows.
 - Node.js ([nodejs.org](https://nodejs.org/)), to build the dashboard —
   optional, the installer skips the UI build and warns if it's missing.
 - Docker Desktop, if any of your services use `docker compose`.
-- No admin rights needed — the scheduled task it registers runs as your
-  own user.
+- No admin rights needed — logon-start is a Startup folder shortcut, not a
+  scheduled task (registering an `AtLogOn` task needs a privilege Windows
+  only grants to admins, even for one that just runs as yourself).
 
 ## Install
 
@@ -143,11 +144,13 @@ into `$env:USERPROFILE\infra\nexus` (override with `NEXUS_INSTALL_DIR`;
 2. Seeds `manifest.yaml` from `manifest.example.yaml` the first time.
 3. Creates a Python virtualenv and installs `requirements.txt`.
 4. Builds the dashboard (`ui/`), unless `npm` is missing.
-5. Registers a scheduled task named `Nexus` that starts at logon and runs
-   `windows/run-nexus.ps1` — a loop that restarts the process 5 seconds
-   after it exits, the same behavior `Restart=always` / `RestartSec=5`
-   gives it on Linux (see `systemd/nexus.service.template`) — then starts
-   it immediately.
+5. Adds a `Nexus.lnk` shortcut to your Startup folder that runs
+   `windows/run-nexus.ps1` at logon — a loop that restarts the process 5
+   seconds after it exits, the same behavior `Restart=always` /
+   `RestartSec=5` gives it on Linux (see `systemd/nexus.service.template`)
+   — then starts it immediately too. Deliberately not a scheduled task:
+   registering an `AtLogOn` task needs a privilege Windows only grants to
+   admin accounts, even for a task that just runs as yourself.
 
 When it finishes, the dashboard is at `http://localhost:8787`. Logs go to
 `nexus.out.log` / `nexus.err.log` in the install directory.
@@ -215,7 +218,8 @@ rm -rf ~/infra/nexus   # or wherever NEXUS_INSTALL_DIR pointed
 **Windows:**
 
 ```powershell
-Unregister-ScheduledTask -TaskName Nexus -Confirm:$false
+Remove-Item "$([Environment]::GetFolderPath('Startup'))\Nexus.lnk"
+Get-Process python | Where-Object { $_.Path -like "*\infra\nexus\venv\*" } | Stop-Process -Force
 Remove-Item -Recurse -Force "$env:USERPROFILE\infra\nexus"   # or wherever NEXUS_INSTALL_DIR pointed
 ```
 
