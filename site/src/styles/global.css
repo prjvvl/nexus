@@ -11,18 +11,18 @@
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk Variable", "Inter Variable", ui-sans-serif, sans-serif;
 
-  /* Cyan, not agen's indigo - a different tool gets a different mark, not
-     the same template recolored. */
-  --color-brand-50: #ecfeff;
-  --color-brand-100: #cffafe;
-  --color-brand-200: #a5f3fc;
-  --color-brand-300: #67e8f9;
-  --color-brand-400: #22d3ee;
-  --color-brand-500: #06b6d4;
-  --color-brand-600: #0891b2;
-  --color-brand-700: #0e7490;
-  --color-brand-800: #155e75;
-  --color-brand-900: #164e63;
+  /* Trestle's own indigo-leaning blue - this project's design family, not
+     stock Tailwind blue (#2563eb). */
+  --color-brand-50: hsl(235 85% 96%);
+  --color-brand-100: hsl(235 85% 91%);
+  --color-brand-200: hsl(235 80% 83%);
+  --color-brand-300: hsl(235 78% 72%);
+  --color-brand-400: hsl(235 75% 62%);
+  --color-brand-500: hsl(235 72% 54%);
+  --color-brand-600: hsl(235 70% 46%);
+  --color-brand-700: hsl(235 68% 38%);
+  --color-brand-800: hsl(236 65% 30%);
+  --color-brand-900: hsl(236 60% 22%);
   --color-brand: var(--color-brand-600);
   --color-brand-fg: #ffffff;
 
@@ -46,8 +46,8 @@
 
   /* Links in prose: a light tint of the brand on the dark default, so they
      read clearly (about 7:1) instead of the brand's dark button shade. */
-  --color-link: #67e8f9;
-  --color-link-hover: #a5f3fc;
+  --color-link: hsl(232 92% 78%);
+  --color-link-hover: hsl(232 100% 88%);
 
   /* Code blocks stay dark in both themes (Shiki's github-dark colors). */
   --color-code-bg: hsl(224 42% 8%);
@@ -55,7 +55,7 @@
   --color-code-fg: hsl(210 30% 88%);
   --color-code-muted: hsl(215 18% 62%);
   --color-code-ok: hsl(152 55% 60%);
-  --color-code-accent: #67e8f9;
+  --color-code-accent: hsl(232 92% 78%);
 
   /* Scrollbar thumbs: low contrast against bg, firmer on hover. */
   --color-scrollbar: hsl(222 22% 24%);
