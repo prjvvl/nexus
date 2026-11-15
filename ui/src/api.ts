@@ -18,7 +18,8 @@ export interface ServiceInfo {
 export interface JobInfo {
   name: string;
   script: string;
-  schedule: string;
+  schedule?: string;
+  trigger?: "on_start";
   status?: RunStatus;
   last_action?: string;
   last_run_at?: string;

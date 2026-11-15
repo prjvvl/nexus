@@ -48,6 +48,22 @@ function Assert-LastExitCode($what) {
 $InstallDir = if ($env:NEXUS_INSTALL_DIR) { $env:NEXUS_INSTALL_DIR } else { Join-Path $env:USERPROFILE "infra\nexus" }
 $RepoUrl = if ($env:NEXUS_REPO_URL) { $env:NEXUS_REPO_URL } else { "https://github.com/prjvvl/nexus.git" }
 
+# Stop any already-running instance *before* touching $InstallDir at all -
+# otherwise robocopy below can hang for a very long time (its default is
+# ~1,000,000 retries, 30s apart, on a sharing violation) on
+# nexus.out.log/nexus.err.log, which a running instance holds open for
+# writing. Matched by command line/path since there's no task/service
+# object to query; killing the wrapper (run-nexus.ps1's restart loop)
+# before its python child stops it from just relaunching that child a
+# moment later.
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -like "*run-nexus.ps1*" -and $_.CommandLine -like "*$InstallDir*" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Get-Process python -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -eq (Join-Path $InstallDir "venv\Scripts\python.exe") } |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
+
 if ((Test-Path (Join-Path $ScriptRepoDir "main.py")) -and (Test-Path (Join-Path $ScriptRepoDir "nexus"))) {
     # Running from a real checkout.
     if ($ScriptRepoDir -ne $InstallDir) {
@@ -59,9 +75,11 @@ if ((Test-Path (Join-Path $ScriptRepoDir "main.py")) -and (Test-Path (Join-Path 
         # robocopy's exclude-vs-purge interaction nuking manifest.yaml/
         # state.db. venv is excluded too (regenerated next anyway, and a
         # Windows venv copied from a different path is needless weight).
-        robocopy $ScriptRepoDir $InstallDir /E `
+        # /R:2 /W:1 caps retries on any *other* locked file too - failing
+        # fast beats hanging on robocopy's 1,000,000-retry default.
+        robocopy $ScriptRepoDir $InstallDir /E /R:2 /W:1 `
             /XD ".git" "node_modules" "dist" ".astro" "venv" "__pycache__" `
-            /XF "state.db" "manifest.yaml" `
+            /XF "state.db" "manifest.yaml" "nexus.out.log" "nexus.err.log" `
             /NFL /NDL /NJH /NJS | Out-Null
         if ($LASTEXITCODE -ge 8) { throw "robocopy failed copying repo to $InstallDir (exit $LASTEXITCODE)" }
     }
@@ -117,20 +135,6 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
 }
 
 $RunNexusArgs = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$RepoDir\windows\run-nexus.ps1`""
-
-# Stop any already-running instance (from a previous install) before
-# starting a new one - otherwise the old process keeps running and the
-# Start-Process below launches a second one fighting it for port 8787,
-# unlike Linux's `systemctl restart` / macOS's bootout+bootstrap. The
-# wrapper (run-nexus.ps1's restart loop) is matched by command line since
-# there's no task/service object to query; killing it first, before its
-# python child, stops it from just relaunching that child a moment later.
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -like "*run-nexus.ps1*" } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-Get-Process python -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -eq (Join-Path $RepoDir "venv\Scripts\python.exe") } |
-    Stop-Process -Force -ErrorAction SilentlyContinue
 
 Write-Host "==> Adding a Startup shortcut (starts at logon, restarts on exit)"
 $StartupDir = [Environment]::GetFolderPath("Startup")

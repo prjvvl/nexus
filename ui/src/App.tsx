@@ -8,7 +8,6 @@ import {
   RotateCw,
   ScrollText,
   Square,
-  Waypoints,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -98,18 +97,16 @@ export default function App() {
     <div className="mx-auto max-w-5xl px-6 py-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-500/15 text-accent-400">
-            <Waypoints className="h-5 w-5" aria-hidden="true" />
-          </div>
+          <img src="/favicon.svg" alt="" width="40" height="40" className="h-10 w-10" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Nexus</h1>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-white">Nexus</h1>
             <p className="text-sm text-slate-400">Service orchestration dashboard</p>
           </div>
         </div>
         {(error || actionError) && (
           <div
             role="alert"
-            className="flex items-center gap-2 rounded bg-rose-500/15 px-3 py-2 text-xs text-rose-400 ring-1 ring-rose-500/30"
+            className="flex items-center gap-2 rounded bg-error/15 px-3 py-2 text-xs text-error ring-1 ring-error/30"
           >
             <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{error ?? actionError}</span>
@@ -119,7 +116,7 @@ export default function App() {
                 setActionError(null);
               }}
               aria-label="Dismiss"
-              className="text-rose-400 hover:text-rose-300"
+              className="text-error hover:text-error/80"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
@@ -198,8 +195,8 @@ export default function App() {
                         }
                         className={`flex items-center gap-2 rounded px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
                           s.status === "running"
-                            ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
-                            : "bg-accent-500/15 text-accent-400 hover:bg-accent-500/25"
+                            ? "bg-error/15 text-error hover:bg-error/25"
+                            : "bg-brand-600/15 text-brand-400 hover:bg-brand-600/25"
                         }`}
                       >
                         {s.status === "running" ? (
@@ -215,7 +212,7 @@ export default function App() {
                     </div>
                   </div>
                   {!!s.fail_count && (
-                    <p className="mt-2 text-xs text-amber-400">
+                    <p className="mt-2 text-xs text-warning">
                       {s.fail_count} failed restart{s.fail_count === 1 ? "" : "s"}
                       {s.next_retry_at &&
                         ` · retrying around ${new Date(s.next_retry_at).toLocaleTimeString()}`}
@@ -243,12 +240,18 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-slate-200">{j.name}</span>
                       <code className="rounded bg-base-700 px-2 py-1 text-xs text-slate-400">
-                        {j.schedule}
+                        {j.schedule ?? (j.trigger === "on_start" ? "on start" : "manual")}
                       </code>
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
-                      last run {timeAgo(j.last_run_at)} · next run{" "}
-                      {j.next_run_at ? new Date(j.next_run_at).toLocaleString() : "n/a"}
+                      last run {timeAgo(j.last_run_at)}
+                      {j.schedule && (
+                        <>
+                          {" "}
+                          · next run{" "}
+                          {j.next_run_at ? new Date(j.next_run_at).toLocaleString() : "n/a"}
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
@@ -280,7 +283,7 @@ function SummaryTile({
   tone?: "good" | "bad";
 }) {
   const toneClass =
-    tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-rose-400" : "text-white";
+    tone === "good" ? "text-success" : tone === "bad" ? "text-error" : "text-white";
   return (
     <div className="rounded-xl border border-base-700 bg-base-900 px-4 py-4">
       <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">

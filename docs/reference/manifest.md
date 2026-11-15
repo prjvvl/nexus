@@ -30,14 +30,25 @@ formatting.
 | Field | Type | Required | Default | Meaning |
 |---|---|---|---|---|
 | `name` | string | Yes | — | Unique across all services and jobs. |
-| `script` | path | Yes | — | Run on its schedule, or on demand via Run now / `/api/jobs/{name}/run`. |
-| `schedule` | cron string | Yes | — | Standard 5-field crontab syntax (`APScheduler`'s `CronTrigger.from_crontab`). |
+| `script` | path | Yes | — | Run on its schedule, on Nexus start (`trigger: on_start`), or on demand via Run now / `/api/jobs/{name}/run`. |
+| `schedule` | cron string | No | — | Standard 5-field crontab syntax (`APScheduler`'s `CronTrigger.from_crontab`). |
+| `trigger` | `on_start` | No | — | Runs the job once, synchronously, every time Nexus starts (same timing as services reaching their `desired_state`). |
 | `args` | list of string | No | `[]` | Passed to the script. |
 | `timeout` | integer (seconds) | No | `600` | Timeout for the run. |
 
+`schedule` and `trigger` are independent and both optional — a job can have
+either, both, or neither. Neither means manual-only: it only runs via Run
+now or the API. This is also the right way to model a one-off action that
+isn't actually a persistent process (e.g. "open an app when Nexus starts")
+without abusing a service, which would otherwise show a permanent, false
+`running` status with no actual process behind it and dead Start/Stop
+controls.
+
 Jobs have no `max_restarts`/backoff fields — a failed job run is just
-recorded as `error` in its current state; it isn't retried, and runs again
-on its normal schedule regardless of whether the last run failed.
+recorded as `error` in its current state; it isn't retried, and a
+`schedule`d job runs again on its normal schedule regardless of whether the
+last run failed, while an `on_start` job simply tries again next Nexus
+start.
 
 All script paths are relative to the repository root, and every script
 runs with that directory as its working directory — see

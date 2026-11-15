@@ -3,8 +3,11 @@
 ## Services vs. jobs
 
 A **service** is long-running — a container, a process — that should
-generally be up. A **job** is a one-shot script on a cron schedule. Services
-and jobs share one manifest and one dashboard, but are tracked separately:
+generally be up. A **job** is a one-shot script, triggered by a cron
+schedule, Nexus starting (`trigger: on_start`), a manual Run now/API call,
+or any combination — unlike services, nothing about a job is required
+except `name` and `script`. Services and jobs share one manifest and one
+dashboard, but are tracked separately:
 Nexus rejects a manifest that reuses a name across the two
 (`nexus/manifest.py`'s `validate_manifest`), and state storage keys every
 row on `(name, kind)` for the same reason.

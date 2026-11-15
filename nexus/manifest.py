@@ -31,21 +31,33 @@ def load_manifest() -> tuple[list, list]:
     return data.get("services") or [], data.get("jobs") or []
 
 
+SUPPORTED_JOB_TRIGGERS = {"on_start"}
+
+
 def validate_manifest(services: list, jobs: list) -> None:
     """Fails fast with a clear message on a malformed manifest.yaml, instead of
     letting a missing field surface as a raw KeyError from deep inside startup
     scheduling - and rejects a name reused across a service and a job, since
-    Nexus's state storage assumes names are unique regardless of kind."""
+    Nexus's state storage assumes names are unique regardless of kind.
+
+    A job needs neither `schedule` nor `trigger` - omitting both just makes it
+    manual-only (Run now / the API only). `schedule` and `trigger: on_start`
+    aren't mutually exclusive either; a job can have both."""
     seen: dict[str, str] = {}
     for kind, entries, required in (
         ("service", services, ("name", "script")),
-        ("job", jobs, ("name", "script", "schedule")),
+        ("job", jobs, ("name", "script")),
     ):
         for i, entry in enumerate(entries):
             missing = [f for f in required if f not in entry]
             if missing:
                 raise SystemExit(
                     f"manifest.yaml: {kind} #{i + 1} is missing required field(s) {missing}: {entry}"
+                )
+            if kind == "job" and "trigger" in entry and entry["trigger"] not in SUPPORTED_JOB_TRIGGERS:
+                raise SystemExit(
+                    f"manifest.yaml: job #{i + 1} has unsupported trigger {entry['trigger']!r} "
+                    f"- supported: {sorted(SUPPORTED_JOB_TRIGGERS)}"
                 )
             name = entry["name"]
             if name in seen:

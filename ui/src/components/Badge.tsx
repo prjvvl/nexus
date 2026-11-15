@@ -1,12 +1,12 @@
 import type { RunStatus } from "../api";
 
 const STYLES: Record<RunStatus, string> = {
-  running: "bg-emerald-500/15 text-emerald-400 ring-emerald-500/30",
-  idle: "bg-emerald-500/15 text-emerald-400 ring-emerald-500/30",
+  running: "bg-success/15 text-success ring-success/30",
+  idle: "bg-success/15 text-success ring-success/30",
   stopped: "bg-slate-500/15 text-slate-400 ring-slate-500/30",
-  pending: "bg-amber-500/15 text-amber-400 ring-amber-500/30",
-  crashed: "bg-amber-500/15 text-amber-400 ring-amber-500/30",
-  error: "bg-rose-500/15 text-rose-400 ring-rose-500/30",
+  pending: "bg-warning/15 text-warning ring-warning/30",
+  crashed: "bg-warning/15 text-warning ring-warning/30",
+  error: "bg-error/15 text-error ring-error/30",
   unknown: "bg-slate-500/15 text-slate-400 ring-slate-500/30",
 };
 

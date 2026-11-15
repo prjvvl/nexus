@@ -23,7 +23,7 @@ export default function Toggle({
     >
       <span
         className={`relative h-5 w-9 rounded-full transition-colors ${
-          checked ? "bg-accent-500" : "bg-base-600"
+          checked ? "bg-brand-600" : "bg-base-600"
         }`}
       >
         <span

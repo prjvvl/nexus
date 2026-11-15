@@ -31,6 +31,9 @@ services:
     desired_state: stopped
 
 jobs:
+  # `schedule` is optional - a job can also (or instead) set
+  # `trigger: on_start` to run once every time Nexus starts, or have
+  # neither and only run via the dashboard's Run now button / the API.
   - name: nexus-demo-job
     script: examples/demo-job/run.sh
     schedule: "*/2 * * * *"
