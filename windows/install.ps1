@@ -1,24 +1,74 @@
-# Bootstraps Nexus on Windows: creates the venv, installs deps, builds the
+# Bootstraps Nexus on Windows: gets the code into a canonical install dir
+# (mirroring install.sh's git-clone/pull/copy, not just operating wherever
+# you happen to run this from), creates the venv, installs deps, builds the
 # UI, seeds manifest.yaml, and registers a scheduled task ("Nexus") that
 # starts it at logon and keeps it running (run-nexus.ps1 restart-loops it,
 # mirroring systemd's Restart=always on Linux). Safe to re-run.
 #
-# Usage (from a checkout):
+# Usage - either clone it yourself first:
+#   git clone https://github.com/prjvvl/nexus.git
 #   cd nexus
 #   .\windows\install.ps1
+# or run it from any checkout and let it clone/copy into $NEXUS_INSTALL_DIR
+# (default $env:USERPROFILE\infra\nexus) for you - same as install.sh.
+# $NEXUS_REPO_URL overrides where a fresh clone comes from.
 #
 # Unlike install.sh, this does not install Python/Node/Git/Docker for you -
 # Windows has no single package manager every machine already has. Install
 # them yourself first (see docs/install.md), then run this script.
 
 $ErrorActionPreference = "Stop"
-$RepoDir = (Resolve-Path "$PSScriptRoot\..").Path
-Set-Location $RepoDir
+$ScriptRepoDir = (Resolve-Path "$PSScriptRoot\..").Path
 . "$PSScriptRoot\common.ps1"
 
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     throw "python not found on PATH. Install Python 3: https://www.python.org/downloads/"
 }
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    throw "git not found on PATH. Install Git for Windows: https://git-scm.com/download/win"
+}
+
+# $ErrorActionPreference = "Stop" only makes *PowerShell* errors terminating
+# - a native exe (git, pip, npm) exiting non-zero doesn't throw on its own,
+# so each one below is checked explicitly rather than trusting that
+# preference to catch a failed clone/install/build before the task gets
+# (re)started against it.
+function Assert-LastExitCode($what) {
+    if ($LASTEXITCODE -ne 0) { throw "$what failed (exit $LASTEXITCODE)" }
+}
+
+$InstallDir = if ($env:NEXUS_INSTALL_DIR) { $env:NEXUS_INSTALL_DIR } else { Join-Path $env:USERPROFILE "infra\nexus" }
+$RepoUrl = if ($env:NEXUS_REPO_URL) { $env:NEXUS_REPO_URL } else { "https://github.com/prjvvl/nexus.git" }
+
+if ((Test-Path (Join-Path $ScriptRepoDir "main.py")) -and (Test-Path (Join-Path $ScriptRepoDir "nexus"))) {
+    # Running from a real checkout.
+    if ($ScriptRepoDir -ne $InstallDir) {
+        Write-Host "==> Copying repo to $InstallDir"
+        New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+        # /E copies subdirs (incl. empty); deliberately no /MIR or /PURGE -
+        # unlike install.sh's `rsync --delete`, this never deletes anything
+        # already in $InstallDir, so a stale file lingers instead of risking
+        # robocopy's exclude-vs-purge interaction nuking manifest.yaml/
+        # state.db. venv is excluded too (regenerated next anyway, and a
+        # Windows venv copied from a different path is needless weight).
+        robocopy $ScriptRepoDir $InstallDir /E `
+            /XD ".git" "node_modules" "dist" ".astro" "venv" "__pycache__" `
+            /XF "state.db" "manifest.yaml" `
+            /NFL /NDL /NJH /NJS | Out-Null
+        if ($LASTEXITCODE -ge 8) { throw "robocopy failed copying repo to $InstallDir (exit $LASTEXITCODE)" }
+    }
+} elseif (Test-Path (Join-Path $InstallDir ".git")) {
+    Write-Host "==> $InstallDir already exists, pulling latest"
+    git -C $InstallDir pull --ff-only
+    Assert-LastExitCode "git pull"
+} else {
+    Write-Host "==> Cloning $RepoUrl to $InstallDir"
+    git clone $RepoUrl $InstallDir
+    Assert-LastExitCode "git clone"
+}
+
+$RepoDir = $InstallDir
+Set-Location $RepoDir
 
 # Not just "is something named bash.exe on PATH" - Windows' own System32
 # ships a bash.exe stub that launches WSL, which fails outright if the
@@ -36,17 +86,12 @@ if (-not (Test-Path "manifest.yaml")) {
     Write-Host "    Edit $RepoDir\manifest.yaml for this machine's services/jobs before relying on it."
 }
 
-# $ErrorActionPreference = "Stop" only makes *PowerShell* errors terminating
-# - a native exe (pip, npm) exiting non-zero doesn't throw on its own, so
-# each one is checked explicitly rather than trusting that preference to
-# catch a failed install/build before the task gets (re)started against it.
-function Assert-LastExitCode($what) {
-    if ($LASTEXITCODE -ne 0) { throw "$what failed (exit $LASTEXITCODE)" }
-}
-
 Write-Host "==> Setting up Python venv"
 python -m venv venv
-& "$RepoDir\venv\Scripts\pip.exe" install --upgrade pip
+# Must be `python -m pip`, not `pip.exe` directly - pip.exe refuses to
+# upgrade itself on Windows (its own running executable can't be replaced
+# mid-execution) and exits non-zero telling you to do exactly this.
+& "$RepoDir\venv\Scripts\python.exe" -m pip install --upgrade pip
 Assert-LastExitCode "pip install --upgrade pip"
 & "$RepoDir\venv\Scripts\pip.exe" install -r requirements.txt
 Assert-LastExitCode "pip install -r requirements.txt"

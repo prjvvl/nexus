@@ -88,8 +88,8 @@ When it finishes, the dashboard is at `http://<this machine>:8787`.
 
 ### macOS
 
-Clone the repo yourself first (there's no `curl | bash` one-liner on macOS
-— see Requirements above for what to install beforehand):
+There's no `curl | bash` one-liner on macOS — see Requirements above for
+what to install beforehand, then either clone it yourself first:
 
 ```sh
 git clone https://github.com/prjvvl/nexus.git
@@ -97,12 +97,20 @@ cd nexus
 ./macos/install.sh
 ```
 
+or run `install.sh` from anywhere and let it get the code itself — same as
+on Linux, it clones [prjvvl/nexus](https://github.com/prjvvl/nexus) into
+`~/infra/nexus` (override with `NEXUS_INSTALL_DIR`; `NEXUS_REPO_URL`
+overrides where it clones from, e.g. a fork).
+
 `install.sh` is safe to re-run. Each run:
 
-1. Seeds `manifest.yaml` from `manifest.example.yaml` the first time.
-2. Creates a Python virtualenv and installs `requirements.txt`.
-3. Builds the dashboard (`ui/`), unless `npm` is missing.
-4. Installs `com.prjvvl.nexus.plist` to `~/Library/LaunchAgents/`,
+1. Gets the code into `~/infra/nexus`: clones it fresh, `git pull`s if it's
+   already there, or copies a local checkout in if you ran the script from
+   one elsewhere.
+2. Seeds `manifest.yaml` from `manifest.example.yaml` the first time.
+3. Creates a Python virtualenv and installs `requirements.txt`.
+4. Builds the dashboard (`ui/`), unless `npm` is missing.
+5. Installs `com.prjvvl.nexus.plist` to `~/Library/LaunchAgents/`,
    `bootstrap`s it as your user's launchd agent, and kickstarts it. `RunAtLoad`
    + `KeepAlive` start it at login and restart it (after a 5-second
    throttle) if it ever exits — the same behavior `Restart=always` /
@@ -113,8 +121,8 @@ When it finishes, the dashboard is at `http://localhost:8787`. Logs go to
 
 ### Windows
 
-Clone the repo yourself first (there's no `curl | bash` one-liner on
-Windows — see Requirements above for what needs to already be on `PATH`):
+There's no `curl | bash` one-liner on Windows — see Requirements above for
+what needs to already be on `PATH`, then either clone it yourself first:
 
 ```powershell
 git clone https://github.com/prjvvl/nexus.git
@@ -122,12 +130,20 @@ cd nexus
 .\windows\install.ps1
 ```
 
+or run `install.ps1` from anywhere and let it get the code itself — same
+idea as Linux/macOS, it clones [prjvvl/nexus](https://github.com/prjvvl/nexus)
+into `$env:USERPROFILE\infra\nexus` (override with `NEXUS_INSTALL_DIR`;
+`NEXUS_REPO_URL` overrides where it clones from, e.g. a fork).
+
 `install.ps1` is safe to re-run. Each run:
 
-1. Seeds `manifest.yaml` from `manifest.example.yaml` the first time.
-2. Creates a Python virtualenv and installs `requirements.txt`.
-3. Builds the dashboard (`ui/`), unless `npm` is missing.
-4. Registers a scheduled task named `Nexus` that starts at logon and runs
+1. Gets the code into `$env:USERPROFILE\infra\nexus`: clones it fresh,
+   `git pull`s if it's already there, or copies a local checkout in via
+   `robocopy` if you ran the script from one elsewhere.
+2. Seeds `manifest.yaml` from `manifest.example.yaml` the first time.
+3. Creates a Python virtualenv and installs `requirements.txt`.
+4. Builds the dashboard (`ui/`), unless `npm` is missing.
+5. Registers a scheduled task named `Nexus` that starts at logon and runs
    `windows/run-nexus.ps1` — a loop that restarts the process 5 seconds
    after it exits, the same behavior `Restart=always` / `RestartSec=5`
    gives it on Linux (see `systemd/nexus.service.template`) — then starts
@@ -193,14 +209,14 @@ rm -rf ~/infra/nexus   # or wherever NEXUS_INSTALL_DIR pointed
 ```sh
 launchctl bootout gui/$(id -u)/com.prjvvl.nexus
 rm ~/Library/LaunchAgents/com.prjvvl.nexus.plist
-rm -rf venv ui/dist   # or the whole checkout
+rm -rf ~/infra/nexus   # or wherever NEXUS_INSTALL_DIR pointed
 ```
 
 **Windows:**
 
 ```powershell
 Unregister-ScheduledTask -TaskName Nexus -Confirm:$false
-Remove-Item -Recurse -Force .\venv, .\ui\dist   # or the whole checkout
+Remove-Item -Recurse -Force "$env:USERPROFILE\infra\nexus"   # or wherever NEXUS_INSTALL_DIR pointed
 ```
 
 Either way, this does not stop or remove any services Nexus was managing —

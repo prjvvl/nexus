@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# Bootstraps Nexus on macOS: creates the venv, builds the UI, seeds
-# manifest.yaml, and installs a launchd LaunchAgent that starts Nexus at
-# login and keeps it running (KeepAlive, mirroring systemd's Restart=always
-# on Linux - see systemd/nexus.service.template). Safe to re-run.
+# Bootstraps Nexus on macOS: gets the code into a canonical install dir
+# (git clone/pull, or copy if run from a checkout - same as install.sh on
+# Linux, not just operating wherever you happen to run this from), creates
+# the venv, builds the UI, seeds manifest.yaml, and installs a launchd
+# LaunchAgent that starts Nexus at login and keeps it running (KeepAlive,
+# mirroring systemd's Restart=always on Linux - see
+# systemd/nexus.service.template). Safe to re-run.
 #
-# Usage (from a checkout):
-#   cd nexus
+# Usage - either clone it yourself first:
+#   git clone https://github.com/prjvvl/nexus.git && cd nexus
 #   ./macos/install.sh
+# or run it from any checkout and let it clone/copy into
+# $NEXUS_INSTALL_DIR (default ~/infra/nexus) for you - same as install.sh.
+# $NEXUS_REPO_URL overrides where a fresh clone comes from.
 #
 # Unlike install.sh (Linux), this does not install Python/Node/Docker for
 # you - macOS has no single package manager every machine already has.
@@ -15,13 +21,37 @@
 # services use docker compose. Install what you need, then run this script.
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_DIR"
+INSTALL_DIR="${NEXUS_INSTALL_DIR:-$HOME/infra/nexus}"
+REPO_URL="${NEXUS_REPO_URL:-https://github.com/prjvvl/nexus.git}"
+SCRIPT_REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 command -v python3 >/dev/null 2>&1 || {
   echo "python3 not found. Install it (e.g. 'brew install python') and re-run." >&2
   exit 1
 }
+
+if [ -f "$SCRIPT_REPO_DIR/main.py" ] && [ -d "$SCRIPT_REPO_DIR/nexus" ]; then
+  # Running from a real checkout.
+  if [ "$SCRIPT_REPO_DIR" != "$INSTALL_DIR" ]; then
+    echo "==> Copying repo to $INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR"
+    rsync -a --delete \
+      --exclude '.git' --exclude 'ui/node_modules' --exclude 'ui/dist' \
+      --exclude 'site/node_modules' --exclude 'site/dist' --exclude 'site/.astro' \
+      --exclude 'venv' --exclude '__pycache__' \
+      --exclude 'state.db' --exclude 'manifest.yaml' \
+      "$SCRIPT_REPO_DIR"/ "$INSTALL_DIR"/
+  fi
+elif [ -d "$INSTALL_DIR/.git" ]; then
+  echo "==> $INSTALL_DIR already exists, pulling latest"
+  git -C "$INSTALL_DIR" pull --ff-only
+else
+  echo "==> Cloning $REPO_URL to $INSTALL_DIR"
+  git clone "$REPO_URL" "$INSTALL_DIR"
+fi
+
+REPO_DIR="$INSTALL_DIR"
+cd "$REPO_DIR"
 
 if [ ! -f manifest.yaml ]; then
   echo "==> No manifest.yaml yet, seeding from manifest.example.yaml"
