@@ -1,0 +1,123 @@
+---
+import { ArrowRight } from "@lucide/astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Button from "../components/Button.astro";
+import DashboardMock from "../components/DashboardMock.astro";
+import InstallCommand from "../components/InstallCommand.astro";
+import Terminal from "../components/Terminal.astro";
+import GitHubIcon from "../components/GitHubIcon.astro";
+import { allDocs, sidebar } from "../lib/docs";
+import { withBase } from "../lib/url";
+import { siteConfig } from "../site.config";
+
+const installCommands = [{ label: "Linux", prompt: "$", command: `curl -fsSL ${siteConfig.url}/install.sh | sh` }];
+
+const manifestSample = `services:
+  - name: my-app
+    script: scripts/defaults/run-compose.sh
+    stop_script: scripts/defaults/stop-compose.sh
+    status_script: scripts/defaults/status-compose.sh
+    args: ["/path/to/my-app"]
+    desired_state: running
+
+jobs:
+  - name: nightly-backup
+    script: scripts/backup.sh
+    schedule: "0 3 * * *"`;
+
+const does = [
+  "Starts, stops, and restarts a service through a bash script you write",
+  "Restarts a crashed service with backoff, and gives up loudly after too many tries",
+  "Runs cron jobs on schedule, or on demand from the dashboard",
+  "One dashboard and one REST API — no separate agent, no separate monitoring stack",
+];
+
+const doesNot = [
+  "No auth, no CORS lock-down — trusted LAN only, by design (see Security)",
+  "No multi-machine support, no Kubernetes, no agents",
+  "No CPU/memory charts — this is a control surface, not a monitoring product",
+  "No manifest hot-reload for new entries yet — a restart picks them up",
+];
+
+const groups = sidebar(await allDocs());
+const allPages = groups.flatMap((g) => g.items);
+---
+
+<BaseLayout title={siteConfig.name}>
+  <header class="mx-auto max-w-3xl px-4 pt-20 pb-4 md:pt-28">
+    <p class="font-mono text-sm text-link">~$ systemctl status nexus</p>
+    <h1 class="mt-3 text-3xl font-bold tracking-tight text-fg md:text-4xl">
+      A service manager for the machine you already own.
+    </h1>
+    <p class="mt-4 max-w-xl text-lg text-fg-muted">
+      One manifest, one systemd unit. Nexus starts, stops, and watches your services and
+      cron jobs — nothing else has to run for that to work.
+    </p>
+    <div class="mt-7 flex flex-wrap gap-3">
+      <Button href="/getting-started/">Get started <ArrowRight class="size-4" aria-hidden="true" /></Button>
+      <Button href={siteConfig.repo} variant="secondary"><GitHubIcon class="size-4" /> Source</Button>
+    </div>
+  </header>
+
+  <section class="mx-auto max-w-3xl px-4 py-10">
+    <DashboardMock />
+    <p class="mt-3 text-sm text-fg-muted">
+      That's the whole UI — the demo service and job this project ships with, as the
+      dashboard shows them.
+    </p>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-4 py-10">
+    <h2 class="text-xl font-bold tracking-tight text-fg">One file is the source of truth</h2>
+    <p class="mt-2 max-w-xl text-fg-muted">
+      <code class="font-mono text-fg">manifest.yaml</code> declares what should run, how to
+      start/stop/check it, and whether it should come back after a reboot.
+    </p>
+    <div class="mt-5">
+      <Terminal title="manifest.yaml">
+        <pre><code>{manifestSample}</code></pre>
+      </Terminal>
+    </div>
+    <div class="mt-8">
+      <InstallCommand commands={installCommands} />
+      <p class="mt-3 text-sm text-fg-muted">
+        Installs to <code class="font-mono text-fg">~/infra/nexus</code> and runs as a systemd service.{" "}
+        <a href={withBase("/install/")} class="font-medium text-link underline-offset-4 hover:text-link-hover hover:underline">
+          Install details
+        </a>
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-4 py-10">
+    <div class="grid gap-10 sm:grid-cols-2">
+      <div>
+        <h2 class="text-sm font-semibold tracking-wider text-fg uppercase">What it does</h2>
+        <ul class="mt-4 space-y-3 text-sm text-fg-muted">
+          {does.map((line) => <li class="border-l-2 border-brand/60 pl-3">{line}</li>)}
+        </ul>
+      </div>
+      <div>
+        <h2 class="text-sm font-semibold tracking-wider text-fg uppercase">What it deliberately doesn't</h2>
+        <ul class="mt-4 space-y-3 text-sm text-fg-muted">
+          {doesNot.map((line) => <li class="border-l-2 border-border pl-3">{line}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-4 py-10 pb-24">
+    <h2 class="text-sm font-semibold tracking-wider text-fg uppercase">Read the docs</h2>
+    <ul class="mt-4 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+      {
+        allPages.map((item) => (
+          <li>
+            <a href={withBase(`/${item.id}/`)} class="text-fg-muted hover:text-link">
+              {item.title}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</BaseLayout>

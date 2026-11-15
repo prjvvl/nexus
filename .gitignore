@@ -3,6 +3,9 @@ state.db
 ui/node_modules/
 ui/dist/
 ui/*.tsbuildinfo
+site/node_modules/
+site/dist/
+site/.astro/
 venv/
 __pycache__/
 *.pyc
