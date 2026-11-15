@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.prjvvl.nexus</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NEXUS_INSTALL_DIR__/venv/bin/python</string>
+        <string>__NEXUS_INSTALL_DIR__/main.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__NEXUS_INSTALL_DIR__</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>__NEXUS_PATH__</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__NEXUS_INSTALL_DIR__/nexus.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__NEXUS_INSTALL_DIR__/nexus.err.log</string>
+</dict>
+</plist>

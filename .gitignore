@@ -11,3 +11,5 @@ __pycache__/
 *.pyc
 examples/demo-job/output.log
 server.log
+nexus.out.log
+nexus.err.log
