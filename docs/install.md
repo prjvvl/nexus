@@ -17,8 +17,11 @@ on whatever machine you run it on.
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/prjvvl/nexus/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/prjvvl/nexus/main/install.sh | bash
 ```
+
+(`bash`, not `sh` — the script needs real bash, not just a POSIX shell; piping
+into `sh` fails immediately on Debian/Ubuntu, where it's dash.)
 
 This clones [prjvvl/nexus](https://github.com/prjvvl/nexus) into
 `~/infra/nexus` (override with `NEXUS_INSTALL_DIR`) and runs the installer
@@ -32,7 +35,7 @@ cd nexus
 ```
 
 (`NEXUS_REPO_URL` overrides where the one-liner clones from, e.g. to install
-your own fork: `curl ... | NEXUS_REPO_URL=https://github.com/<you>/nexus.git sh`.)
+your own fork: `curl ... | NEXUS_REPO_URL=https://github.com/<you>/nexus.git bash`.)
 
 Either way, `install.sh` is safe to re-run. Each run:
 

@@ -13,7 +13,7 @@ installs from source (and builds its own dashboard) every time.
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/prjvvl/nexus/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/prjvvl/nexus/main/install.sh | bash
 ```
 
 or clone it first:

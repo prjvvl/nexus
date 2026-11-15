@@ -10,7 +10,7 @@ import { allDocs, sidebar } from "../lib/docs";
 import { withBase } from "../lib/url";
 import { siteConfig } from "../site.config";
 
-const installCommands = [{ label: "Linux", prompt: "$", command: `curl -fsSL ${siteConfig.url}/install.sh | sh` }];
+const installCommands = [{ label: "Linux", prompt: "$", command: `curl -fsSL ${siteConfig.url}/install.sh | bash` }];
 
 const manifestSample = `services:
   - name: my-app

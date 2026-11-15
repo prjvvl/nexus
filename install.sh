@@ -7,17 +7,20 @@
 # Usage:
 #   git clone https://github.com/prjvvl/nexus.git && cd nexus && ./install.sh
 # or, without cloning first:
-#   curl -fsSL https://raw.githubusercontent.com/prjvvl/nexus/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/prjvvl/nexus/main/install.sh | bash
 set -euo pipefail
 
 INSTALL_DIR="${NEXUS_INSTALL_DIR:-$HOME/infra/nexus}"
 REPO_URL="${NEXUS_REPO_URL:-https://github.com/prjvvl/nexus.git}"
 
 # ${BASH_SOURCE[0]} only names a real file when this script is run from a
-# checkout (`./install.sh` or `bash install.sh`). Piped into a shell
-# (`curl ... | sh`), there's no script file to point at, so REPO_DIR won't
+# checkout (`./install.sh` or `bash install.sh`). Piped into bash
+# (`curl ... | bash`), there's no script file to point at, so REPO_DIR won't
 # actually contain the repo - checking for main.py/nexus/ (not just that the
-# path resolved) is what tells the two cases apart.
+# path resolved) is what tells the two cases apart. This needs an actual bash,
+# not just a POSIX sh: piping into `sh` (dash, on Debian/Ubuntu) would hit
+# "set: Illegal option -o pipefail" on the line above before even getting
+# here, since pipefail and BASH_SOURCE are both bash-only.
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" && pwd)"
 
 echo "==> Installing system dependencies"
